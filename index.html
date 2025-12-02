@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>除法探究：分錢與直式同步教學 (修正除號版)</title>
+    <style>
+        :root {
+            --c-1000: #4a90e2;
+            --c-100: #e74c3c;
+            --c-10: #f1c40f;
+            --c-1: #e67e22;
+            --bg-board: #2c3e50;
+        }
+
+        body {
+            font-family: 'Microsoft JhengHei', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        /* --- 左側：遊戲操作區 (65%) --- */
+        #game-section {
+            width: 65%;
+            display: flex;
+            flex-direction: column;
+            border-right: 5px solid #bdc3c7;
+        }
+
+        #controls {
+            background: #fff;
+            padding: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .input-setup {
+            padding: 5px;
+            font-size: 16px;
+            width: 60px;
+            text-align: center;
+        }
+
+        #start-btn {
+            background-color: #27ae60;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        #start-btn:hover { background-color: #2ecc71; }
+
+        .bank-btn {
+            padding: 5px 10px;
+            font-size: 14px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 5px;
+            color: white;
+            font-weight: bold;
+        }
+        .b-10 { background-color: var(--c-10); color: #333; }
+        .b-1 { background-color: var(--c-1); }
+
+        #workspace {
+            flex: 1;
+            position: relative;
+            background-color: #ecf0f1;
+            border-bottom: 2px dashed #bdc3c7;
+        }
+
+        /* 錢幣與商店 */
+        .money {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            position: absolute;
+            cursor: grab;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+            transition: top 0.2s, left 0.2s;
+            z-index: 100;
+        }
+        .money:active { cursor: grabbing; z-index: 200; }
+        .m-10 { background: var(--c-10); color: #333; border: 2px solid #f39c12; }
+        .m-1 { background: var(--c-1); color: white; border: 2px solid #d35400; }
+
+        #store {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 140px;
+            height: 120px;
+            background-color: #27ae60;
+            border-radius: 15px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            text-align: center;
+            border: 4px solid #2ecc71;
+        }
+
+        #people-area {
+            height: 35%;
+            background-color: #dcdde1;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            padding: 10px;
+        }
+
+        .person-box {
+            background: white;
+            border: 3px solid #7f8c8d;
+            border-radius: 10px;
+            width: 25%;
+            height: 90%;
+            position: relative;
+        }
+
+        /* --- 右側：數學黑板區 (35%) --- */
+        #math-section {
+            width: 35%;
+            background-color: var(--bg-board);
+            color: white;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .math-title { font-size: 1.2rem; margin-bottom: 20px; opacity: 0.8; }
+        
+        #h-equation {
+            font-size: 2rem;
+            font-family: 'Courier New', monospace;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.1);
+            padding: 10px 20px;
+            border-radius: 10px;
+        }
+
+        /* 直式網格佈局 */
+        .long-division {
+            display: grid;
+            grid-template-columns: 30px 45px 45px;
+            row-gap: 0px; /* 移除間隙，讓線條連在一起 */
+            font-size: 2rem;
+            font-family: 'Courier New', monospace;
+            position: relative;
+        }
+
+        .ld-cell {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 50px;
+        }
+        
+        /* 特殊列高調整，讓分隔線緊湊一點 */
+        .line-row { height: 20px; } 
+
+        /* 輸入框樣式 */
+        .math-input {
+            width: 35px;
+            height: 40px;
+            font-size: 1.5rem;
+            text-align: center;
+            border: 2px dashed rgba(255,255,255,0.3);
+            background: transparent;
+            color: white;
+            border-radius: 5px;
+        }
+        .math-input:focus { border-color: white; outline: none; background: rgba(255,255,255,0.1); }
+
+        /* 顏色編碼 */
+        .col-ten { background-color: rgba(241, 196, 15, 0.2); border-color: var(--c-10); } 
+        .col-one { background-color: rgba(230, 126, 34, 0.2); border-color: var(--c-1); }
+
+        .border-bottom { border-bottom: 3px solid white; }
+        .border-right { border-right: 3px solid white; border-radius: 0 0 10px 0; }
+        
+        /* 頂部標籤樣式 */
+        .header-label {
+            font-size: 16px;
+            font-weight: bold;
+            align-items: flex-end; 
+            padding-bottom: 5px;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-section">
+    <div id="controls">
+        <div style="display:flex; align-items:center; gap:5px;">
+            <span>題目設定：</span>
+            <input type="number" id="set-dividend" class="input-setup" value="52"> 
+            <span>÷</span>
+            <input type="number" id="set-divisor" class="input-setup" value="2">
+            <button id="start-btn" onclick="setupProblem()">出題</button>
+        </div>
+        <div>
+            <small>補錢：</small>
+            <button class="bank-btn b-10" onclick="addMoney(10)">+10</button>
+            <button class="bank-btn b-1" onclick="addMoney(1)">+1</button>
+        </div>
+    </div>
+
+    <div id="workspace">
+        <div id="store">
+            <div style="font-size:24px">🏪</div>
+            <div style="font-size:14px; margin-top:5px">便利商店<br>換錢區</div>
+        </div>
+    </div>
+
+    <div id="people-area"></div>
+</div>
+
+<div id="math-section">
+    <div class="math-title">直式紀錄板</div>
+    
+    <div id="h-equation">52 ÷ 2 = ?</div>
+
+    <div id="division-board" class="long-division">
+        </div>
+</div>
+
+<script>
+    let moneyIdCounter = 0;
+    const workspace = document.getElementById('workspace');
+    const store = document.getElementById('store');
+    const peopleArea = document.getElementById('people-area');
+    const board = document.getElementById('division-board');
+    const hEq = document.getElementById('h-equation');
+
+    // 初始執行
+    setupProblem();
+
+    function setupProblem() {
+        const dividend = parseInt(document.getElementById('set-dividend').value);
+        const divisor = parseInt(document.getElementById('set-divisor').value);
+        
+        if (dividend > 99 || dividend < 10) { alert("請設定二位數 (10-99)"); return; }
+        if (divisor > 5 || divisor < 2) { alert("建議除數設定 2~5 人"); return; }
+
+        workspace.querySelectorAll('.money').forEach(el => el.remove());
+        peopleArea.innerHTML = '';
+        
+        for(let i=0; i<divisor; i++) {
+            const box = document.createElement('div');
+            box.classList.add('person-box');
+            const label = document.createElement('div');
+            label.innerText = (i===0) ? "哥哥" : (i===1) ? "弟弟" : ("第"+(i+1)+"人");
+            label.style.textAlign = "center";
+            label.style.background = "#7f8c8d";
+            label.style.color = "white";
+            box.appendChild(label);
+            peopleArea.appendChild(box);
+        }
+
+        const tens = Math.floor(dividend / 10);
+        const ones = dividend % 10;
+        
+        for(let i=0; i<tens; i++) createMoneyElement(10, 50 + i*60, 50);
+        for(let i=0; i<ones; i++) createMoneyElement(1, 50 + i*60, 150);
+
+        hEq.innerText = `${dividend} ÷ ${divisor} = ?`;
+        renderLongDivision(dividend, divisor);
+    }
+
+    function renderLongDivision(dividend, divisor) {
+        const tensDigit = Math.floor(dividend / 10);
+        const onesDigit = dividend % 10;
+
+        // 清空並重建 Grid
+        board.innerHTML = `
+            <div class="ld-cell"></div>
+            <div class="ld-cell header-label" style="color:var(--c-10)">十位</div>
+            <div class="ld-cell header-label" style="color:var(--c-1)">個位</div>
+
+            <div class="ld-cell"></div>
+            <div class="ld-cell border-bottom"><input type="text" class="math-input col-ten" maxlength="1"></div>
+            <div class="ld-cell border-bottom"><input type="text" class="math-input col-one" maxlength="1"></div>
+
+            <div class="ld-cell border-right">${divisor}</div>
+            <div class="ld-cell">${tensDigit}</div>
+            <div class="ld-cell">${onesDigit}</div>
+
+            <div class="ld-cell">-</div>
+            <div class="ld-cell"><input type="text" class="math-input col-ten" maxlength="1"></div>
+            <div class="ld-cell"></div>
+
+            <div class="ld-cell line-row"></div>
+            <div class="ld-cell border-bottom line-row"></div>
+            <div class="ld-cell border-bottom line-row"></div>
+
+            <div class="ld-cell"></div>
+            <div class="ld-cell"><input type="text" class="math-input col-ten" maxlength="1"></div>
+            <div class="ld-cell"><input type="text" class="math-input col-one" placeholder="↓" maxlength="1"></div>
+
+            <div class="ld-cell">-</div>
+            <div class="ld-cell"><input type="text" class="math-input col-ten" maxlength="1"></div>
+            <div class="ld-cell"><input type="text" class="math-input col-one" maxlength="1"></div>
+
+             <div class="ld-cell line-row"></div>
+            <div class="ld-cell border-bottom line-row"></div>
+            <div class="ld-cell border-bottom line-row"></div>
+
+             <div class="ld-cell"></div>
+            <div class="ld-cell"></div>
+            <div class="ld-cell"><input type="text" class="math-input" maxlength="1"></div>
+        `;
+    }
+
+    function createMoneyElement(value, x, y) {
+        const el = document.createElement('div');
+        el.classList.add('money');
+        el.classList.add('m-' + value);
+        el.innerText = value;
+        el.dataset.value = value;
+        el.id = 'money-' + moneyIdCounter++;
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        setupDrag(el);
+        workspace.appendChild(el);
+    }
+
+    function addMoney(val) {
+        createMoneyElement(val, 50 + Math.random()*200, 50 + Math.random()*100);
+    }
+
+    function setupDrag(el) {
+        let isDragging = false;
+        let startX, startY, initialLeft, initialTop;
+
+        el.addEventListener('mousedown', dragStart);
+        el.addEventListener('touchstart', dragStart, {passive: false});
+
+        function dragStart(e) {
+            e.preventDefault();
+            isDragging = true;
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            startX = clientX;
+            startY = clientY;
+            initialLeft = el.offsetLeft;
+            initialTop = el.offsetTop;
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchmove', dragMove, {passive: false});
+            document.addEventListener('touchend', dragEnd);
+            el.style.zIndex = 1000;
+        }
+
+        function dragMove(e) {
+            if (!isDragging) return;
+            e.preventDefault();
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            el.style.left = (initialLeft + (clientX - startX)) + 'px';
+            el.style.top = (initialTop + (clientY - startY)) + 'px';
+        }
+
+        function dragEnd(e) {
+            isDragging = false;
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('touchend', dragEnd);
+            el.style.zIndex = '';
+            checkDrop(el);
+        }
+    }
+
+    function checkDrop(el) {
+        const elRect = el.getBoundingClientRect();
+        const storeRect = store.getBoundingClientRect();
+        
+        if (isOverlapping(elRect, storeRect)) {
+            const val = parseInt(el.dataset.value);
+            if (val === 10) {
+                el.remove();
+                for (let i = 0; i < 10; i++) {
+                    setTimeout(() => {
+                         createMoneyElement(1, store.offsetLeft - 60, store.offsetTop + 50 + Math.random()*50);
+                    }, i * 50);
+                }
+                showStoreMsg("換錢成功！");
+            } else {
+                el.style.left = (store.offsetLeft - 60) + 'px';
+            }
+        }
+    }
+
+    function isOverlapping(rect1, rect2) {
+        return !(rect1.right < rect2.left || rect1.left > rect2.right || rect1.bottom < rect2.top || rect1.top > rect2.bottom);
+    }
+    
+    function showStoreMsg(msg) {
+        const div = document.createElement('div');
+        div.innerText = msg;
+        div.style.position = 'absolute';
+        div.style.background = 'rgba(0,0,0,0.7)';
+        div.style.color = 'white';
+        div.style.padding = '5px 10px';
+        div.style.borderRadius = '5px';
+        div.style.top = (store.offsetTop - 30) + 'px';
+        div.style.left = store.offsetLeft + 'px';
+        workspace.appendChild(div);
+        setTimeout(() => div.remove(), 1000);
+    }
+</script>
+
+</body>
+</html>
+
+
